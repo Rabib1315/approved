@@ -1,7 +1,5 @@
 {
-  "/upload/page": "app/upload/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/page": "app/page.js",
-  "/package/page": "app/package/page.js",
-  "/builder/page": "app/builder/page.js",
-  "/review/page": "app/review/page.js"
+  "/upload/page": "app/upload/page.js"
 }

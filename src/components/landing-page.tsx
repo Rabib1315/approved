@@ -2,8 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Check, GraduationCap, CheckCircle, Bot, Clock, Headphones, User, Star, Shield, ArrowRight, Menu, Facebook, Twitter, Instagram } from "lucide-react"
+import { Check, GraduationCap, Bot, Clock, Headphones, Star, Shield, ArrowRight, Facebook, Twitter, Instagram } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Header } from "@/components/header"
+import { FeatureCard } from "@/components/ui/feature-card"
+import { StatsCard } from "@/components/ui/stats-card"
+import { TestimonialCard } from "@/components/ui/testimonial-card"
 
 export function LandingPage() {
   const router = useRouter()
@@ -44,22 +48,15 @@ export function LandingPage() {
     }
   ]
 
+  const stats = [
+    { value: "2,847", label: "Students Helped" },
+    { value: "4.9", label: "Average Rating", icon: <Star className="w-4 h-4 text-yellow-400 fill-current" /> },
+    { value: "94%", label: "Success Rate" }
+  ]
+
   return (
     <div className="max-w-sm mx-auto bg-white min-h-screen relative">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-ca-red rounded-full flex items-center justify-center">
-              <span className="text-white text-sm">🍁</span>
-            </div>
-            <span className="font-semibold text-gray-800">VisaNavigator</span>
-          </div>
-          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
-            <Menu className="w-4 h-4" />
-          </Button>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <section className="px-4 py-8 text-center">
@@ -85,15 +82,15 @@ export function LandingPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Why Choose VisaNavigator?</h2>
         <div className="space-y-4">
           {features.map((feature, index) => (
-            <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className={`w-8 h-8 ${feature.bgColor} rounded-full flex items-center justify-center flex-shrink-0`}>
-                <span className={feature.iconColor}>{feature.icon}</span>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">{feature.title}</h3>
-                <p className="text-sm text-gray-600">{feature.description}</p>
-              </div>
-            </div>
+            <FeatureCard
+              key={index}
+              icon={feature.icon}
+              title={feature.title}
+              description={feature.description}
+              bgColor={feature.bgColor}
+              iconColor={feature.iconColor}
+              index={index}
+            />
           ))}
         </div>
       </section>
@@ -103,50 +100,27 @@ export function LandingPage() {
         <div className="text-center mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Trusted by Students Worldwide</h2>
           <div className="flex justify-center space-x-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-ca-blue">2,847</div>
-              <div className="text-xs text-gray-600">Students Helped</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-ca-blue flex items-center justify-center">
-                <span>4.9</span>
-                <Star className="w-4 h-4 text-yellow-400 ml-1 fill-current" />
-              </div>
-              <div className="text-xs text-gray-600">Average Rating</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-ca-blue">94%</div>
-              <div className="text-xs text-gray-600">Success Rate</div>
-            </div>
+            {stats.map((stat, index) => (
+              <StatsCard
+                key={index}
+                value={stat.value}
+                label={stat.label}
+                icon={stat.icon}
+                index={index}
+              />
+            ))}
           </div>
         </div>
       </section>
 
       {/* Testimonial */}
       <section className="px-4 py-6">
-        <Card className="shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center mb-3">
-              <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-3">
-                <User className="w-6 h-6 text-gray-600" />
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900">Sarah Chen</h3>
-                <div className="flex items-center">
-                  <div className="flex text-yellow-400 mr-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-3 h-3 fill-current" />
-                    ))}
-                  </div>
-                  <span className="text-xs text-gray-500">Toronto, ON</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-sm text-gray-700 italic">
-              "VisaNavigator made the entire process so much easier. I was confused about which documents I needed, but their checklist was perfect. Got my study permit approved in just 6 weeks!"
-            </p>
-          </CardContent>
-        </Card>
+        <TestimonialCard
+          name="Sarah Chen"
+          location="Toronto, ON"
+          rating={5}
+          text="VisaNavigator made the entire process so much easier. I was confused about which documents I needed, but their checklist was perfect. Got my study permit approved in just 6 weeks!"
+        />
       </section>
 
       {/* Comparison Table */}
