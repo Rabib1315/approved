@@ -2,27 +2,33 @@
 alwaysApply: true
 ---
 
-# Prompt Manager Development Rules
+# VisaNavigator Development Rules
+
+## Application Overview
+**VisaNavigator** is an AI-powered Canadian student visa application assistant that helps international students navigate the complex process of obtaining a study permit. The application provides document management, AI-powered analysis, application building, strength assessment, and progress tracking.
 
 ## Tech Stack
 - **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion
 - **Backend**: Drizzle ORM, PostgreSQL, Supabase
 - **Auth**: Clerk
+- **File Upload**: React Dropzone
+- **State Management**: React Query (TanStack Query)
 
 ## File Structure
 ```
-actions/              # Server actions (prompts-actions.ts, auth-actions.ts)
+actions/              # Server actions (visa-actions.ts, auth-actions.ts, upload-actions.ts)
 app/                  # Next.js app directory
 ├── globals.css       # Tailwind imports
 ├── layout.tsx        # Root layout with ClerkProvider
 ├── page.tsx          # Landing page
-├── (auth)/sign-in/   # Auth pages
-└── prompts/          # Feature pages
-    ├── page.tsx      # Main prompts page
-    └── components/   # Feature components
+├── upload/           # Document upload page
+├── builder/          # Application builder page
+├── review/           # Application review page
+└── package/          # Final package generation
 components/
 ├── ui/              # shadcn/ui components
-└── header.tsx       # Shared components
+├── header.tsx       # Shared header component
+└── upload/          # Upload-specific components
 db/
 ├── index.ts         # Database connection
 ├── schema/          # Drizzle schemas (*-schema.ts)
@@ -33,8 +39,8 @@ middleware.ts        # Clerk auth middleware
 
 ## Naming Conventions
 - Use **kebab-case** for all files and folders
-- Server Actions: `*-actions.ts`
-- Database Schemas: `*-schema.ts`
+- Server Actions: `*-actions.ts` (visa-actions.ts, upload-actions.ts)
+- Database Schemas: `*-schema.ts` (applications-schema.ts, documents-schema.ts)
 - Export client components as: `export const MyComponent`
 - Export server components as: `export default function MyPage`
 
@@ -43,37 +49,40 @@ middleware.ts        # Clerk auth middleware
 "use server"
 
 import { db } from "@/db"
-import { prompts } from "@/db/schema/prompts-schema"
+import { applications } from "@/db/schema/applications-schema"
 import { requireUserId } from "./auth-actions"
 import { eq, desc, and } from "drizzle-orm"
 
-export async function getPrompts() {
+export async function getApplications() {
   try {
     const userId = await requireUserId()
-    const allPrompts = await db
+    const userApplications = await db
       .select()
-      .from(prompts)
-      .where(eq(prompts.user_id, userId))
-      .orderBy(desc(prompts.created_at))
-    return allPrompts
+      .from(applications)
+      .where(eq(applications.user_id, userId))
+      .orderBy(desc(applications.created_at))
+    return userApplications
   } catch (error) {
-    console.error("Error fetching prompts:", error)
-    throw new Error("Failed to fetch prompts")
+    console.error("Error fetching applications:", error)
+    throw new Error("Failed to fetch applications")
   }
 }
 ```
 
 ## Database Schema Pattern
 ```typescript
-// db/schema/prompts-schema.ts
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core"
+// db/schema/applications-schema.ts
+import { pgTable, serial, text, timestamp, boolean } from "drizzle-orm/pg-core"
 
-export const prompts = pgTable("prompts", {
+export const applications = pgTable("applications", {
   id: serial("id").primaryKey(),
   user_id: text("user_id").notNull(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  content: text("content").notNull(),
+  status: text("status").notNull().default("draft"),
+  institution: text("institution").notNull(),
+  program: text("program").notNull(),
+  start_date: text("start_date").notNull(),
+  total_cost: text("total_cost").notNull(),
+  strength_score: text("strength_score"),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at")
     .defaultNow()
@@ -81,8 +90,8 @@ export const prompts = pgTable("prompts", {
     .$onUpdate(() => new Date())
 })
 
-export type InsertPrompt = typeof prompts.$inferInsert
-export type SelectPrompt = typeof prompts.$inferSelect
+export type InsertApplication = typeof applications.$inferInsert
+export type SelectApplication = typeof applications.$inferSelect
 ```
 
 ## Client Component Pattern
@@ -91,21 +100,22 @@ export type SelectPrompt = typeof prompts.$inferSelect
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { createPrompt } from "@/actions/prompts-actions"
+import { createApplication } from "@/actions/visa-actions"
 
-export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
-  const [prompts, setPrompts] = useState(initialPrompts)
+export const ApplicationBuilder = ({ initialData }: ApplicationBuilderProps) => {
+  const [application, setApplication] = useState(initialData)
 
-  const handleCreate = async (formData: FormData) => {
+  const handleSave = async (formData: FormData) => {
     try {
-      const newPrompt = await createPrompt({
-        name: formData.get('name') as string,
-        description: formData.get('description') as string,
-        content: formData.get('content') as string
+      const updatedApp = await createApplication({
+        institution: formData.get('institution') as string,
+        program: formData.get('program') as string,
+        start_date: formData.get('start_date') as string,
+        total_cost: formData.get('total_cost') as string
       })
-      setPrompts(prev => [newPrompt, ...prev])
+      setApplication(updatedApp)
     } catch (error) {
-      console.error('Failed to create prompt:', error)
+      console.error('Failed to save application:', error)
     }
   }
 
@@ -113,18 +123,9 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      className="max-w-4xl mx-auto p-6"
     >
-      {prompts.map((prompt, index) => (
-        <motion.div
-          key={prompt.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.1 }}
-        >
-          <PromptCard prompt={prompt} />
-        </motion.div>
-      ))}
+      <ApplicationForm application={application} onSubmit={handleSave} />
     </motion.div>
   )
 }
@@ -133,26 +134,56 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
 ## Server Page Pattern
 ```typescript
 // Always fetch data in server components and pass to client components
-import { getPrompts } from "@/actions/prompts-actions"
-import { PromptsGrid } from "./components/prompts-grid"
+import { getApplication } from "@/actions/visa-actions"
+import { ApplicationBuilder } from "./components/application-builder"
 
-export default async function PromptsPage() {
+export default async function BuilderPage() {
   return (
     <>
-      <Header />
+      <Header title="Application Builder" showBackButton={true} />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">My Prompts</h1>
-        <Suspense fallback={<LoadingGrid />}>
-          <PromptsContent />
+        <h1 className="text-3xl font-bold mb-8">Build Your Application</h1>
+        <Suspense fallback={<LoadingSpinner />}>
+          <BuilderContent />
         </Suspense>
       </div>
     </>
   )
 }
 
-async function PromptsContent() {
-  const prompts = await getPrompts()
-  return <PromptsGrid initialPrompts={prompts} />
+async function BuilderContent() {
+  const application = await getApplication()
+  return <ApplicationBuilder initialData={application} />
+}
+```
+
+## Document Upload Pattern
+```typescript
+// Upload handling with proper file validation
+export async function uploadDocument(formData: FormData) {
+  try {
+    const userId = await requireUserId()
+    const file = formData.get('file') as File
+    const documentType = formData.get('type') as string
+    
+    // Validate file type and size
+    if (!file || file.size > 10 * 1024 * 1024) { // 10MB limit
+      throw new Error("Invalid file")
+    }
+    
+    // Upload to storage and save metadata to database
+    const document = await saveDocument({
+      user_id: userId,
+      type: documentType,
+      filename: file.name,
+      size: file.size
+    })
+    
+    return document
+  } catch (error) {
+    console.error("Error uploading document:", error)
+    throw new Error("Failed to upload document")
+  }
 }
 ```
 
@@ -191,7 +222,14 @@ npm run db:seed      # Seed with sample data
 2. **Always** use `requireUserId()` in server actions for auth
 3. **Always** verify user ownership: `and(eq(table.id, id), eq(table.user_id, userId))`
 4. **Always** use proper error handling in server actions
-5. Use Framer Motion for animations
+5. **Always** validate file uploads (type, size, security)
+6. Use Framer Motion for animations
+7. Use shadcn/ui components
+8. Export client components as named exports
+9. Use kebab-case for all file names
+10. **Always** handle document uploads securely with proper validation
+11. **Always** provide loading states for async operations
+12. **Always** implement proper form validation with Zod schemas
 6. Use shadcn/ui components
 7. Export client components as named exports
 8. Use kebab-case for all file names

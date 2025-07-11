@@ -4,6 +4,8 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { CheckCircle } from "lucide-react"
 import clsx from "clsx"
+import { useMutation } from "@tanstack/react-query"
+import { uploadDocument } from "@/actions/upload-actions"
 import { Header } from "@/components/header"
 import { UploadCard } from "@/components/ui/upload-card"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -51,13 +53,36 @@ export default function UploadPage() {
     passport: null,
   })
 
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (data: { file: File; type: string }) => {
+      const formData = new FormData()
+      formData.append("file", data.file)
+      formData.append("type", data.type)
+      return uploadDocument(formData)
+    },
+    onSuccess: () => {
+      console.log("Document uploaded successfully")
+    },
+    onError: (error) => {
+      console.error("Upload failed:", error)
+    }
+  })
+
   // Count uploaded
   const uploadedCount = Object.values(uploads).filter(Boolean).length
   const percent = Math.round((uploadedCount / 4) * 100)
 
   // Handlers
   const handleDrop = (key: UploadKey) => (files: File[]) => {
-    setUploads(prev => ({ ...prev, [key]: files[0] }))
+    const file = files[0]
+    setUploads(prev => ({ ...prev, [key]: file }))
+    
+    // Upload to backend
+    uploadMutation.mutate({
+      file,
+      type: key
+    })
   }
   
   const handleTakePhoto = (key: UploadKey) => () => {
@@ -67,7 +92,14 @@ export default function UploadPage() {
     input.accept = 'image/*'
     input.onchange = (ev: any) => {
       if (ev.target.files && ev.target.files[0]) {
-        setUploads(prev => ({ ...prev, [key]: ev.target.files[0] }))
+        const file = ev.target.files[0]
+        setUploads(prev => ({ ...prev, [key]: file }))
+        
+        // Upload to backend
+        uploadMutation.mutate({
+          file,
+          type: key
+        })
       }
     }
     input.click()
