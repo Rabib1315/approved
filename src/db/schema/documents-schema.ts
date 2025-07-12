@@ -11,6 +11,7 @@ export const documents = pgTable("documents", {
   size: integer("size").notNull(),
   mime_type: text("mime_type").notNull(),
   storage_path: text("storage_path").notNull(),
+  text_content: text("text_content"), // extracted text for AI/analysis
   is_verified: boolean("is_verified").default(false),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at")

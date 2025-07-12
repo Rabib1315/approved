@@ -1,49 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, CheckCircle, AlertTriangle, Edit3, ChevronDown } from "lucide-react"
+import { ArrowLeft, CheckCircle, AlertTriangle, Edit3 } from "lucide-react"
 import clsx from "clsx"
+import { getDocuments } from "@/actions/upload-actions"
 
-// Types
-interface ExtractedData {
-  school: { value: string; confidence: number }
-  program: { value: string; confidence: number }
-  duration: { value: string; confidence: number }
-  startDate: { value: string; confidence: number }
-  annualTuition: { value: number; confidence: number }
-  city: { value: string; confidence: number }
-  fullName: { value: string; confidence: number }
-  nationality: { value: string; confidence: number }
-  passportExpiry: { value: string; confidence: number }
-  averageBalance: { value: number; confidence: number }
-  monthlyIncome: { value: number; confidence: number }
-}
-
-const CITY_COSTS = {
-  "Toronto": 1200,
-  "Vancouver": 1300,
-  "Montreal": 900,
-  "Calgary": 1000,
-  "Ottawa": 1100,
-  "Edmonton": 950,
-} as const
-
-type CityKey = keyof typeof CITY_COSTS
-
-// Mock extracted data
-const extractedData: ExtractedData = {
-  school: { value: "University of Toronto", confidence: 98 },
-  program: { value: "Master of Computer Science", confidence: 95 },
-  duration: { value: "2 years", confidence: 100 },
-  startDate: { value: "September 2025", confidence: 100 },
-  annualTuition: { value: 35000, confidence: 92 },
-  city: { value: "Toronto", confidence: 98 },
-  fullName: { value: "Maria Santos", confidence: 100 },
-  nationality: { value: "Brazilian", confidence: 100 },
-  passportExpiry: { value: "March 2029", confidence: 100 },
-  averageBalance: { value: 42000, confidence: 100 },
-  monthlyIncome: { value: 3500, confidence: 95 },
+async function fetchAIExtractedData() {
+  // Fetch user's uploaded documents
+  const docs = await getDocuments()
+  // Aggregate all extracted text
+  const allText = docs.map((doc: any) => doc.text_content || "").join("\n\n")
+  // Call backend API to analyze/parse the text (Claude)
+  const res = await fetch("/api/ai-extract-review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: allText })
+  })
+  return await res.json()
 }
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
@@ -140,12 +114,66 @@ function FinancialCalculation({
 
 export default function ReviewPage() {
   const router = useRouter()
-  const [selectedCity, setSelectedCity] = useState<CityKey>(extractedData.city.value as CityKey)
-  const [showCityDropdown, setShowCityDropdown] = useState(false)
+  const [aiData, setAIData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const monthlyCost = CITY_COSTS[selectedCity]
+  useEffect(() => {
+    setLoading(true)
+    fetchAIExtractedData()
+      .then(setAIData)
+      .catch((e) => setError(e.message || "Failed to analyze documents"))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen">Analyzing your documents...</div>
+  }
+  if (error) {
+    return <div className="flex justify-center items-center min-h-screen text-red-600">{error}</div>
+  }
+  if (!aiData) {
+    return <div className="flex justify-center items-center min-h-screen">No data found.</div>
+  }
+
+  // Safe access to aiData properties with defaults
+  const safeGet = (obj: any, key: string, defaultValue: any = "Not found") => {
+    return obj && obj[key] && obj[key].value !== undefined ? obj[key].value : defaultValue
+  }
+
+  const safeGetConfidence = (obj: any, key: string, defaultValue: number = 0) => {
+    return obj && obj[key] && obj[key].confidence !== undefined ? obj[key].confidence : defaultValue
+  }
+
+  // Extract values with safe defaults
+  const school = safeGet(aiData, 'school', 'University not found')
+  const program = safeGet(aiData, 'program', 'Program not found')
+  const duration = safeGet(aiData, 'duration', 'Duration not found')
+  const startDate = safeGet(aiData, 'startDate', 'Start date not found')
+  const annualTuition = safeGet(aiData, 'annualTuition', 0)
+  const city = safeGet(aiData, 'city', 'Toronto')
+  const fullName = safeGet(aiData, 'fullName', 'Name not found')
+  const nationality = safeGet(aiData, 'nationality', 'Nationality not found')
+  const passportExpiry = safeGet(aiData, 'passportExpiry', 'Expiry not found')
+  const averageBalance = safeGet(aiData, 'averageBalance', 0)
+  const monthlyIncome = safeGet(aiData, 'monthlyIncome', 0)
+
+  // Get confidences with safe defaults
+  const schoolConfidence = safeGetConfidence(aiData, 'school', 0)
+  const programConfidence = safeGetConfidence(aiData, 'program', 0)
+  const durationConfidence = safeGetConfidence(aiData, 'duration', 0)
+  const startDateConfidence = safeGetConfidence(aiData, 'startDate', 0)
+  const annualTuitionConfidence = safeGetConfidence(aiData, 'annualTuition', 0)
+  const cityConfidence = safeGetConfidence(aiData, 'city', 0)
+  const fullNameConfidence = safeGetConfidence(aiData, 'fullName', 0)
+  const nationalityConfidence = safeGetConfidence(aiData, 'nationality', 0)
+  const passportExpiryConfidence = safeGetConfidence(aiData, 'passportExpiry', 0)
+  const averageBalanceConfidence = safeGetConfidence(aiData, 'averageBalance', 0)
+  const monthlyIncomeConfidence = safeGetConfidence(aiData, 'monthlyIncome', 0)
+
+  const monthlyCost = city === 'Toronto' ? 1200 : 1000 // Default costs based on city
   const financialGap = Math.max(0, 
-    (extractedData.annualTuition.value * 2) + (monthlyCost * 24) - extractedData.averageBalance.value
+    (annualTuition * 2) + (monthlyCost * 24) - averageBalance
   )
 
   return (
@@ -182,12 +210,12 @@ export default function ReviewPage() {
             <h2 className="text-base font-semibold text-gray-900">Study Program Details</h2>
           </div>
           <div className="space-y-0">
-            <DataRow label="School" value={extractedData.school.value} confidence={extractedData.school.confidence} />
-            <DataRow label="Program" value={extractedData.program.value} confidence={extractedData.program.confidence} />
-            <DataRow label="Duration" value={extractedData.duration.value} confidence={extractedData.duration.confidence} />
-            <DataRow label="Start Date" value={extractedData.startDate.value} confidence={extractedData.startDate.confidence} />
-            <DataRow label="Annual Tuition" value={extractedData.annualTuition.value} confidence={extractedData.annualTuition.confidence} />
-            <DataRow label="City" value={`${extractedData.city.value}, ON`} confidence={extractedData.city.confidence} />
+            <DataRow label="School" value={school} confidence={schoolConfidence} />
+            <DataRow label="Program" value={program} confidence={programConfidence} />
+            <DataRow label="Duration" value={duration} confidence={durationConfidence} />
+            <DataRow label="Start Date" value={startDate} confidence={startDateConfidence} />
+            <DataRow label="Annual Tuition" value={annualTuition} confidence={annualTuitionConfidence} />
+            <DataRow label="City" value={`${city}, ON`} confidence={cityConfidence} />
           </div>
         </div>
       </div>
@@ -200,9 +228,9 @@ export default function ReviewPage() {
             <h2 className="text-base font-semibold text-gray-900">Personal Information</h2>
           </div>
           <div className="space-y-0">
-            <DataRow label="Full Name" value={extractedData.fullName.value} confidence={extractedData.fullName.confidence} />
-            <DataRow label="Nationality" value={extractedData.nationality.value} confidence={extractedData.nationality.confidence} />
-            <DataRow label="Passport Expiry" value={extractedData.passportExpiry.value} confidence={extractedData.passportExpiry.confidence} />
+            <DataRow label="Full Name" value={fullName} confidence={fullNameConfidence} />
+            <DataRow label="Nationality" value={nationality} confidence={nationalityConfidence} />
+            <DataRow label="Passport Expiry" value={passportExpiry} confidence={passportExpiryConfidence} />
           </div>
         </div>
       </div>
@@ -215,15 +243,15 @@ export default function ReviewPage() {
             <h2 className="text-base font-semibold text-gray-900">Financial Information</h2>
           </div>
           <div className="space-y-0 mb-4">
-            <DataRow label="Average Balance" value={extractedData.averageBalance.value} confidence={extractedData.averageBalance.confidence} />
-            <DataRow label="Monthly Income" value={extractedData.monthlyIncome.value} confidence={extractedData.monthlyIncome.confidence} />
+            <DataRow label="Average Balance" value={averageBalance} confidence={averageBalanceConfidence} />
+            <DataRow label="Monthly Income" value={monthlyIncome} confidence={monthlyIncomeConfidence} />
           </div>
           
           <FinancialCalculation
-            annualTuition={extractedData.annualTuition.value}
+            annualTuition={annualTuition}
             duration={2}
             monthlyCost={monthlyCost}
-            availableFunds={extractedData.averageBalance.value}
+            availableFunds={averageBalance}
           />
         </div>
       </div>
@@ -256,7 +284,7 @@ export default function ReviewPage() {
             <span className="text-sm font-medium text-blue-800">City Cost Validation</span>
             <button
               type="button"
-              onClick={() => setShowCityDropdown(!showCityDropdown)}
+              onClick={() => {}} // No dropdown for now, as city is directly extracted
               className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
             >
               <Edit3 className="w-4 h-4" />
@@ -264,25 +292,11 @@ export default function ReviewPage() {
             </button>
           </div>
           <div className="text-sm text-blue-700 mb-2">
-            {selectedCity}, ON - CAD ${monthlyCost.toLocaleString()}/month
+            {city} - CAD ${monthlyCost.toLocaleString()}/month
           </div>
           <div className="text-xs text-blue-600">Does this look right?</div>
           
-          {showCityDropdown && (
-            <div className="mt-2">
-              <select
-                value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value as CityKey)}
-                className="w-full p-2 border border-blue-300 rounded text-sm"
-              >
-                {Object.keys(CITY_COSTS).map(city => (
-                  <option key={city} value={city}>
-                    {city} - CAD ${CITY_COSTS[city as CityKey].toLocaleString()}/month
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* No dropdown for city as it's directly extracted */}
         </div>
       </div>
 

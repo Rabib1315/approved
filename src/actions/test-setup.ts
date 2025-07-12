@@ -41,7 +41,7 @@ export async function createTestData() {
       status: "draft"
     }).returning()
     
-    // Create some test documents
+    // Create some test documents with valid Supabase storage paths
     await db.insert(documents).values({
       user_id: userId,
       type: "Letter of Acceptance",
@@ -49,7 +49,8 @@ export async function createTestData() {
       original_name: "loa_toronto.pdf",
       size: 1024000,
       mime_type: "application/pdf",
-      storage_path: "/test/loa_toronto.pdf"
+      storage_path: `${userId}/Letter of Acceptance/${Date.now()}.pdf`,
+      text_content: "This is a sample letter of acceptance from University of Toronto for Master of Computer Science program starting September 2024."
     })
     
     await db.insert(documents).values({
@@ -59,7 +60,8 @@ export async function createTestData() {
       original_name: "transcripts.pdf",
       size: 2048000,
       mime_type: "application/pdf",
-      storage_path: "/test/transcripts.pdf"
+      storage_path: `${userId}/Academic Transcripts/${Date.now()}.pdf`,
+      text_content: "Sample academic transcripts showing excellent grades in Computer Science courses with GPA 3.8/4.0."
     })
     
     await db.insert(documents).values({
@@ -69,7 +71,8 @@ export async function createTestData() {
       original_name: "ielts_score.pdf",
       size: 512000,
       mime_type: "application/pdf",
-      storage_path: "/test/ielts_score.pdf"
+      storage_path: `${userId}/IELTS Score/${Date.now()}.pdf`,
+      text_content: "IELTS test results: Overall Band Score 7.5, Reading 8.0, Writing 7.0, Listening 7.5, Speaking 7.0."
     })
     
     return { 
