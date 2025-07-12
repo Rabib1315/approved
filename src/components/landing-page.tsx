@@ -8,6 +8,7 @@ import { Header } from "@/components/header"
 import { FeatureCard } from "@/components/ui/feature-card"
 import { StatsCard } from "@/components/ui/stats-card"
 import { TestimonialCard } from "@/components/ui/testimonial-card"
+import { AIChat } from "@/components/ai-chat"
 
 export function LandingPage() {
   const router = useRouter()
@@ -111,6 +112,15 @@ export function LandingPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* AI Chat Assistant */}
+      <section className="px-4 py-6">
+        <div className="text-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Ask Our AI Assistant</h2>
+          <p className="text-gray-600 text-sm">Get instant answers to your visa questions</p>
+        </div>
+        <AIChat />
       </section>
 
       {/* Testimonial */}

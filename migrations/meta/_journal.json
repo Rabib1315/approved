@@ -8,6 +8,13 @@
       "when": 1752277481767,
       "tag": "0000_worthless_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1752292278059,
+      "tag": "0001_slim_mariko_yashida",
+      "breakpoints": true
     }
   ]
 }

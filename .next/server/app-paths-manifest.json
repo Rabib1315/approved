@@ -1,3 +1,8 @@
 {
-  "/page": "app/page.js"
+  "/api/ai-template/route": "app/api/ai-template/route.js",
+  "/chat/page": "app/chat/page.js",
+  "/ai-test/page": "app/ai-test/page.js",
+  "/upload/page": "app/upload/page.js",
+  "/review/page": "app/review/page.js",
+  "/builder/page": "app/builder/page.js"
 }

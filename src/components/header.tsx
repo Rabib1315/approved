@@ -1,8 +1,9 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Menu, ArrowLeft } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { NavigationMenu } from "@/components/navigation-menu"
 
 interface HeaderProps {
   title?: string
@@ -56,16 +57,7 @@ export const Header = ({
           </div>
           <span className="font-semibold text-gray-800">{title}</span>
         </div>
-        {showMenuButton && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-gray-600 hover:text-gray-800"
-            onClick={handleMenuClick}
-          >
-            <Menu className="w-4 h-4" />
-          </Button>
-        )}
+        {showMenuButton && <NavigationMenu />}
       </div>
     </header>
   )

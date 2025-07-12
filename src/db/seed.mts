@@ -1,10 +1,11 @@
 import { config } from "dotenv"
 config({ path: ".env.local" })
 
-import { db } from "./index.mts"
-import { users } from "./schema/index.js"
-
 async function seed() {
+  // Use dynamic imports to ensure environment variables are loaded first
+  const { db } = await import("./index.mts")
+  const { users } = await import("./schema/users-schema.ts")
+  
   await db.insert(users).values([
     {
       id: "user_1",

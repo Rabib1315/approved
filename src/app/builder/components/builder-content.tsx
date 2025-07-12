@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, CheckCircle, AlertTriangle, Edit3, Download, FileText, FolderOpen, Loader2 } from "lucide-react"
 import clsx from "clsx"
 import { useQuery, useMutation } from "@tanstack/react-query"
-import { getApplications, getApplicationStrength } from "@/actions/visa-actions"
+import { getApplications, calculateApplicationStrength } from "@/actions/visa-actions"
 import { getDocuments } from "@/actions/upload-actions"
 
 // Types
@@ -49,25 +49,32 @@ function ProgressBar({ score, color }: { score: number; color: string }) {
 
 function StrengthDashboard({ applicationId }: { applicationId?: number }) {
   const [overallScore, setOverallScore] = useState(0)
-  
-  const { data: strengthScore } = useQuery({
+  const [breakdown, setBreakdown] = useState({
+    institutionQuality: 0,
+    financialFit: 0,
+    userProfile: 0,
+    programFit: 0,
+    documentCompleteness: 0,
+  })
+
+  const { data: strengthData } = useQuery({
     queryKey: ["application-strength", applicationId],
-    queryFn: () => applicationId ? getApplicationStrength(applicationId) : Promise.resolve(0),
+    queryFn: () => applicationId ? calculateApplicationStrength(applicationId) : Promise.resolve(undefined),
     enabled: !!applicationId
   })
-  
-  useEffect(() => {
-    if (strengthScore !== undefined) {
-      setOverallScore(strengthScore / 10) // Convert to 0-10 scale
-    }
-  }, [strengthScore])
 
-  // Calculate category scores based on application data
+  useEffect(() => {
+    if (strengthData && typeof strengthData.totalScore === "number") {
+      setOverallScore(strengthData.totalScore / 10)
+      setBreakdown(strengthData.breakdown)
+    }
+  }, [strengthData])
+
   const strengthCategories: StrengthCategory[] = [
-    { name: "Academic Fit", score: 95, color: "green" },
-    { name: "Financial Proof", score: 78, color: "yellow" },
-    { name: "Study Plan", score: 98, color: "green" },
-    { name: "Home Ties", score: 85, color: "green" },
+    { name: "Academic Fit", score: breakdown.institutionQuality, color: "green" },
+    { name: "Financial Proof", score: breakdown.financialFit, color: breakdown.financialFit >= 80 ? "green" : breakdown.financialFit >= 60 ? "yellow" : "red" },
+    { name: "Study Plan", score: breakdown.programFit, color: breakdown.programFit >= 80 ? "green" : breakdown.programFit >= 60 ? "yellow" : "red" },
+    { name: "Home Ties", score: breakdown.userProfile, color: breakdown.userProfile >= 80 ? "green" : breakdown.userProfile >= 60 ? "yellow" : "red" },
   ]
 
   return (
@@ -80,7 +87,6 @@ function StrengthDashboard({ applicationId }: { applicationId?: number }) {
           Stronger than 89% of successful student applicants
         </div>
       </div>
-      
       <div className="space-y-3">
         {strengthCategories.map((category) => (
           <div key={category.name} className="flex items-center justify-between">
@@ -98,13 +104,27 @@ function StrengthDashboard({ applicationId }: { applicationId?: number }) {
   )
 }
 
-function StudyPlanGenerator({ onGenerate }: { onGenerate: () => void }) {
+function StudyPlanGenerator({ applicationId }: { applicationId: number }) {
   const [isEditing, setIsEditing] = useState(false)
-  const [content, setContent] = useState(`I am applying to pursue a Master of Computer Science at University of Toronto, starting September 2025. My academic background in computer science has prepared me for advanced study in computer science.
+  const [content, setContent] = useState("")
+  const [loading, setLoading] = useState(false)
 
-My financial situation shows CAD $42,000 in savings with family support of CAD $56,800 to cover the total program cost of CAD $98,800.
-
-Upon completion, I plan to return to Brazil where the technology sector is growing rapidly and my specialized skills will be in high demand.`)
+  const handleGenerate = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/ai-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationId, type: "studyPlan" }),
+      })
+      const data = await res.json()
+      setContent(data.template?.statementOfPurpose || "Failed to generate study plan.")
+    } catch (e) {
+      setContent("Failed to generate study plan.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
@@ -122,7 +142,6 @@ Upon completion, I plan to return to Brazil where the technology sector is growi
           Edit
         </button>
       </div>
-      
       {isEditing ? (
         <div className="space-y-3">
           <textarea
@@ -154,15 +173,16 @@ Upon completion, I plan to return to Brazil where the technology sector is growi
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 leading-relaxed max-h-32 overflow-y-auto">
-            {content}
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 leading-relaxed max-h-32 overflow-y-auto min-h-20">
+            {loading ? "Generating..." : content || "Click 'Generate Study Plan Letter' to get started."}
           </div>
           <button
             type="button"
-            onClick={onGenerate}
+            onClick={handleGenerate}
             className="w-full py-2 bg-ca-blue text-white text-sm font-medium rounded-lg hover:bg-ca-blue/90 transition-colors"
+            disabled={loading}
           >
-            Generate Study Plan Letter
+            {loading ? "Generating..." : "Generate Study Plan Letter"}
           </button>
         </div>
       )}
@@ -170,35 +190,27 @@ Upon completion, I plan to return to Brazil where the technology sector is growi
   )
 }
 
-function FinancialPlanGenerator({ onGenerate }: { onGenerate: () => void }) {
+function FinancialPlanGenerator({ applicationId }: { applicationId: number }) {
   const [isEditing, setIsEditing] = useState(false)
-  const [content, setContent] = useState(`I, Maria Santos, hereby declare my financial capacity to support my studies in Canada.
+  const [content, setContent] = useState("")
+  const [loading, setLoading] = useState(false)
 
-PROGRAM DETAILS:
-- Institution: University of Toronto
-- Program: Master of Computer Science
-- Duration: 2 years (September 2025 - August 2027)
-- Total Program Cost: CAD $98,800
-
-BREAKDOWN OF COSTS:
-- Tuition Fees (2 years): CAD $70,000
-- Living Expenses (Toronto, 24 months): CAD $28,800
-- Total Required: CAD $98,800
-
-FUNDING SOURCES:
-1. Personal Savings: CAD $42,000
-   - Bank statements provided as proof
-   - Funds available in Brazilian Real (R$) equivalent
-
-2. Family Support: CAD $56,800
-   - Sponsor: [Parent/Guardian Name]
-   - Relationship: [Relationship]
-   - Sponsor letter and financial documents provided
-
-I confirm that all funds are readily available and will be accessible throughout my studies. I understand the financial requirements and commit to maintaining adequate funding for the duration of my program.
-
-Signed: Maria Santos
-Date: [Current Date]`)
+  const handleGenerate = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/ai-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationId, type: "financialPlan" }),
+      })
+      const data = await res.json()
+      setContent(data.template?.resumeTemplate || "Failed to generate financial plan.")
+    } catch (e) {
+      setContent("Failed to generate financial plan.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
@@ -216,7 +228,6 @@ Date: [Current Date]`)
           Edit
         </button>
       </div>
-      
       {isEditing ? (
         <div className="space-y-3">
           <textarea
@@ -248,85 +259,19 @@ Date: [Current Date]`)
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 leading-relaxed max-h-40 overflow-y-auto">
-            {content}
+          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 leading-relaxed max-h-40 overflow-y-auto min-h-20">
+            {loading ? "Generating..." : content || "Click 'Generate Financial Plan Letter' to get started."}
           </div>
           <button
             type="button"
-            onClick={onGenerate}
+            onClick={handleGenerate}
             className="w-full py-2 bg-ca-blue text-white text-sm font-medium rounded-lg hover:bg-ca-blue/90 transition-colors"
+            disabled={loading}
           >
-            Generate Financial Plan Letter
+            {loading ? "Generating..." : "Generate Financial Plan Letter"}
           </button>
         </div>
       )}
-    </div>
-  )
-}
-
-function DocumentChecklist({ documents }: { documents: any[] }) {
-  // Map uploaded documents to checklist status
-  const documentChecklist: DocumentStatus[] = [
-    { name: "Acceptance Letter", status: "completed", uploaded: documents.some(d => d.type === "acceptanceLetter") },
-    { name: "Bank Statements", status: "completed", uploaded: documents.some(d => d.type === "bankStatements") },
-    { name: "Passport", status: "completed", uploaded: documents.some(d => d.type === "passport") },
-    { name: "Official Transcripts", status: "warning", uploaded: documents.some(d => d.type === "transcripts") },
-    { name: "Sponsor Letter", status: "warning" },
-    { name: "Biometrics", status: "missing" },
-  ]
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-      <h3 className="text-base font-semibold text-gray-900 mb-3">Missing Documents Checklist</h3>
-      <div className="space-y-2">
-        {documentChecklist.map((doc) => (
-          <div key={doc.name} className="flex items-center gap-2">
-            {doc.status === "completed" && <CheckCircle className="w-4 h-4 text-green-500" />}
-            {doc.status === "warning" && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
-            {doc.status === "missing" && <div className="w-4 h-4 border-2 border-red-300 rounded-full" />}
-            <span className={clsx(
-              "text-sm",
-              doc.status === "completed" && "text-green-700",
-              doc.status === "warning" && "text-yellow-700",
-              doc.status === "missing" && "text-red-700"
-            )}>
-              {doc.name}
-              {doc.status === "warning" && " (sealed/official version needed)"}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function DocumentPackagePreview({ documents }: { documents: GeneratedDocument[] }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-      <h3 className="text-base font-semibold text-gray-900 mb-3">Document Package Preview</h3>
-      <div className="bg-gray-50 rounded-lg p-3">
-        <div className="text-sm font-medium text-gray-900 mb-2">📁 Maria_Santos_Student_Visa_Application/</div>
-        <div className="space-y-1 text-xs text-gray-600 ml-4">
-          {documents.map((doc, index) => (
-            <div key={doc.name} className="flex items-center gap-2">
-              <FileText className="w-3 h-3" />
-              <span className={doc.generated ? "text-green-700" : "text-gray-500"}>
-                {String(index + 1).padStart(2, '0')}_{doc.name.replace(/\s+/g, '_')}.pdf
-              </span>
-              {doc.loading && <Loader2 className="w-3 h-3 animate-spin text-ca-blue" />}
-              {doc.generated && <CheckCircle className="w-3 h-3 text-green-500" />}
-            </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <FolderOpen className="w-3 h-3" />
-            <span>04_Supporting_Documents/</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FileText className="w-3 h-3" />
-            <span>05_Government_Forms_Checklist.pdf</span>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
@@ -395,14 +340,14 @@ export function BuilderContent() {
       </div>
 
       {/* Application Strength Dashboard */}
-      <div className="w-full px-4 mb-4">
-        <StrengthDashboard applicationId={currentApplication?.id} />
-      </div>
+      {currentApplication?.id && (
+        <StrengthDashboard applicationId={currentApplication.id} />
+      )}
 
       {/* Document Generators */}
       <div className="w-full px-4">
-        <StudyPlanGenerator onGenerate={() => handleGenerateDocument(0)} />
-        <FinancialPlanGenerator onGenerate={() => handleGenerateDocument(1)} />
+        <StudyPlanGenerator applicationId={currentApplication?.id ?? 0} />
+        <FinancialPlanGenerator applicationId={currentApplication?.id ?? 0} />
         
         {/* Sponsor Letter Generator */}
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
@@ -421,9 +366,6 @@ export function BuilderContent() {
             Generate Sponsor Letter Template
           </button>
         </div>
-
-        <DocumentChecklist documents={uploadedDocuments || []} />
-        <DocumentPackagePreview documents={documents} />
       </div>
 
       {/* Bottom Sticky Section */}

@@ -9,6 +9,7 @@ import { uploadDocument } from "@/actions/upload-actions"
 import { Header } from "@/components/header"
 import { UploadCard } from "@/components/ui/upload-card"
 import { ProgressBar } from "@/components/ui/progress-bar"
+import { AIDocumentAnalyzer } from "@/components/ai-document-analyzer"
 
 // Types
 type UploadKey = "acceptanceLetter" | "bankStatements" | "transcripts" | "passport"
@@ -148,6 +149,13 @@ export default function UploadPage() {
           />
         ))}
       </div>
+
+      {/* AI Document Analyzer */}
+      {uploadedCount > 0 && (
+        <div className="w-full px-4 mt-6">
+          <AIDocumentAnalyzer />
+        </div>
+      )}
 
       {/* Bottom Sticky Section */}
       <div className="fixed bottom-0 left-0 w-full flex flex-col items-center bg-white border-t border-gray-200 z-30" style={{ maxWidth: 400, margin: '0 auto' }}>

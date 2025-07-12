@@ -15,6 +15,7 @@
     "db:seed": "tsx src/db/seed.mts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.56.0",
     "@clerk/nextjs": "^6.24.0",
     "@clerk/themes": "^2.2.55",
     "@hookform/resolvers": "^3.10.0",
