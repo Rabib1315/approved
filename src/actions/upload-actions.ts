@@ -149,7 +149,12 @@ export async function uploadDocument(formData: FormData) {
     console.log("Document uploaded successfully:", document.id)
     return document
   } catch (error) {
-    console.error("Error uploading document:", error)
+    console.error("=== DETAILED ERROR INFORMATION ===")
+    console.error("Error type:", typeof error)
+    console.error("Error constructor:", error?.constructor?.name)
+    console.error("Error message:", (error as any)?.message)
+    console.error("Error stack:", (error as any)?.stack)
+    console.error("Full error object:", error)
     
     // Provide more specific error messages
     if (error instanceof Error) {

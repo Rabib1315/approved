@@ -4,19 +4,20 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, CheckCircle, AlertTriangle, Edit3 } from "lucide-react"
 import clsx from "clsx"
-import { getDocuments } from "@/actions/upload-actions"
 
 async function fetchAIExtractedData() {
-  // Fetch user's uploaded documents
-  const docs = await getDocuments()
-  // Aggregate all extracted text
-  const allText = docs.map((doc: any) => doc.text_content || "").join("\n\n")
   // Call backend API to analyze/parse the text (Claude)
+  // The API route will fetch documents and process them
   const res = await fetch("/api/ai-extract-review", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: allText })
+    body: JSON.stringify({})
   })
+  
+  if (!res.ok) {
+    throw new Error(`Failed to fetch AI data: ${res.status} ${res.statusText}`)
+  }
+  
   return await res.json()
 }
 

@@ -51,7 +51,7 @@ export default function AITestPage() {
       if (!applicationId) {
         const testData = await createTestData()
         if (testData.success) {
-          applicationId = testData.applicationId
+          applicationId = testData.applicationId ?? null
         } else {
           throw new Error("Failed to create test data")
         }
@@ -87,7 +87,7 @@ export default function AITestPage() {
       if (!applicationId) {
         const testData = await createTestData()
         if (testData.success) {
-          applicationId = testData.applicationId
+          applicationId = testData.applicationId ?? null
         } else {
           throw new Error("Failed to create test data")
         }
@@ -123,7 +123,7 @@ export default function AITestPage() {
       if (!applicationId) {
         const testData = await createTestData()
         if (testData.success) {
-          applicationId = testData.applicationId
+          applicationId = testData.applicationId ?? null
         } else {
           throw new Error("Failed to create test data")
         }

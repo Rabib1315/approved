@@ -59,17 +59,19 @@ export const UploadCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: uploadedFile ? 1 : 1.02 }}
-      className={clsx(
-        "rounded-xl p-4 mb-4 flex items-center border-2 transition-colors",
-        uploadedFile
-          ? "border-green-500 bg-green-50"
-          : "border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 active:bg-gray-200",
-        isDragActive && !uploadedFile && "border-ca-blue bg-blue-50",
-        className
-      )}
-      style={{ minHeight: 90 }}
-      {...getRootProps()}
+      className={className}
     >
+      <div
+        className={clsx(
+          "rounded-xl p-4 mb-4 flex items-center border-2 transition-colors",
+          uploadedFile
+            ? "border-green-500 bg-green-50"
+            : "border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 active:bg-gray-200",
+          isDragActive && !uploadedFile && "border-ca-blue bg-blue-50"
+        )}
+        style={{ minHeight: 90 }}
+        {...getRootProps()}
+      >
       <input {...getInputProps()} />
       <div className="flex-shrink-0 text-2xl mr-4 select-none">{icon}</div>
       <div className="flex-1">
@@ -104,6 +106,7 @@ export const UploadCard = ({
           </div>
         )}
       </div>
+    </div>
     </motion.div>
   )
 } 
